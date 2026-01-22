@@ -17,6 +17,10 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
+    int returnCode = system(cmd);
+    if(returnCode != 0)
+        return false;
+
     return true;
 }
 
@@ -59,6 +63,28 @@ bool do_exec(int count, ...)
  *
 */
 
+    pid_t pid;
+    int status;
+    pid = fork();
+
+    if(pid == -1)   //Fork Failed
+        return false;
+    else if(pid == 0)   //Code executed in Child Process
+    {
+        execv(command[0], command);
+        exit(EXIT_FAILURE);
+    }
+    else    //Executed in Parent process
+    {
+        wait(&status);
+        if(WIFEXITED(status))
+        {
+            return WEXITSTATUS(status) == 0;
+        }
+    }
+
+
+
     va_end(args);
 
     return true;
@@ -92,6 +118,25 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    id_t pid;
+    int status;
+    int fd = open(outputfile, O_WRONLY | O_TRUNC | O_CREAT, 0644);
+
+    pid = fork();
+    if(pid == -1)   //Fork Failed
+        return -1;
+    else if(pid == 0)   //Code executed in Child Process
+    {
+        dup2(fd, 1);
+        close(fd);
+        execvp(command[0], command);
+
+        exit(EXIT_FAILURE);
+    }
+    else    //Executed in Parent process
+    {
+        wait(&status);
+    }
 
     va_end(args);
 
